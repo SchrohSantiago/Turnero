@@ -1,126 +1,109 @@
-import csv   # Importacion para leer el CSV
-import os # 
-import requests
-csv_pacientes = "modelos//pacientes.csv"
+from app import db
+from sqlalchemy import and_
 
-id_paciente = 1 
-pacientes = []
+class Paciente(db.Model):
+    __tablename__ = 'pacientes'
 
-
-
-url = "https://randomuser.me/api/?inc=name,id,phone,email,location&nat=us"
-
-
-
-def import_csv():
-    global pacientes # La declaramos con global para un uso global
-    global id_paciente
-    libros = []
-
-    with open(csv_pacientes, newline='') as csvfile:  
-        reader = csv.DictReader(csvfile) # DictReader permite la lectura de datos por columna
-        for row in reader:
-            #Convertimos el ID de cadena a entero
-            row['id'] = int(row['id'])
-            libros.append(row)
-
-    if len(libros) > 0:
-        id_paciente = libros[-1]["id"] + 1
-    else:
-        id_paciente = 1
-
-def export_paciente_csv():
-     with open(csv_pacientes, 'w', newline='') as csvfile:
-        
-        campo_nombres = ['id','dni','nombre','apellido','telefono','email','direccion_calle','direccion_numero']
-        writer = csv.DictWriter(csvfile, fieldnames=campo_nombres)
-        writer.writeheader()
-        for paciente in pacientes:
-            writer.writerow(paciente)
-
-def crear_pacientes_api():
-    global id_paciente
-    global pacientes
-
-    for _ in range(3):
-        response = requests.get(url)
-
-        if response.status_code == 200:
-            data = response.json()
-            paciente_dni = data['results'][0]['id']['value']
-            paciente_nombre = data['results'][0]['name']['first']
-            paciente_apellido = data['results'][0]['name']['last']
-            paciente_telefono = data['results'][0]['phone']
-            paciente_email = data['results'][0]['email']
-            paciente_direccion = data['results'][0]['location']['street']['name']
-            paciente_numero_direccion = data['results'][0]['location']['street']['number']
-
-            paciente = {
-                "id": id_paciente,
-                "dni": paciente_dni,
-                "nombre": paciente_nombre,
-                "apellido": paciente_apellido,
-                "telefono": paciente_telefono,
-                "email": paciente_email,
-                "direccion_calle": paciente_direccion,
-                "direccion_numero": paciente_numero_direccion
-            }
-            id_paciente += 1
-            pacientes.append(paciente)
-
-    export_paciente_csv()
-
-def obtener_lista_pacientes():
-    if os.path.exists(csv_pacientes):
-        import_csv()
-        return pacientes
-    None
-
-def obtener_paciente_id(id_search):
-    global pacientes
+    id_paciente = db.Column(db.Integer, unique=True, primary_key=True)
+    dni_paciente = db.Column(db.String(10), unique=True, nullable=False)
+    nombre_paciente = db.Column(db.String(100), nullable=False)
+    apellido_paciente = db.Column(db.String(100), nullable=False)
+    telefono_paciente = db.Column(db.String(100), unique=True, nullable=False)
+    email_paciente = db.Column(db.String(100), unique=True, nullable=False)
+    direccion_calle = db.Column(db.String(100), nullable=False)
+    direccion_numero = db.Column(db.String(100), nullable=False)
+    habilitado = db.Column(db.Integer, nullable=False)
     
 
-    for i in pacientes:
-        if i['id'] == int(id_search):
-            return i
-    return None
+    def paciente_dict(self):
+        return {
+            'id_paciente': self.id_paciente,
+            'dni_paciente': self.dni_paciente,
+            'nombre_paciente': self.nombre_paciente,
+            'apellido_paciente': self.apellido_paciente,
+            'telefono_paciente': self.telefono_paciente,
+            'email_paciente': self.email_paciente,
+            'direccion_calle': self.direccion_calle,
+            'direccion_numero': self.direccion_numero,
+            'habilitado': self.habilitado
+        }
 
+    def as_dict(self):
+        return {column.name: getattr(self, column.name) for column in self.__table__.columns}
+
+def obtener_lista_pacientes():
+    return Paciente.query.all()
+
+def obtener_paciente_id(dni_search):
+    return Paciente.query.filter_by(dni_paciente=dni_search).first()
 
 def agregar_paciente(data):
-    global pacientes
-    global id_paciente
+    existe_dni = Paciente.query.filter_by(dni_paciente=data['dni_paciente']).first()
+    existe_email = Paciente.query.filter_by(email_paciente=data['email_paciente']).first()
 
-    pacientes.append({
-        'id': id_paciente,
-        'dni': data['dni'],
-        'nombre': data['nombre'],
-        'apellido': data['apellido'],
-        'telefono': data['telefono'],
-        'email': data['email'],
-        'direccion_calle': data['direccion_calle'],
-        'direccion_numero': data['direccion_numero']
-    })
+    if existe_dni or existe_email:
+        return None
+    
+    paciente = Paciente(
+        dni_paciente=data['dni_paciente'],
+        nombre_paciente=data['nombre_paciente'],
+        apellido_paciente=data['apellido_paciente'],
+        telefono_paciente=data['telefono_paciente'],
+        email_paciente=data['email_paciente'],
+        direccion_calle=data['direccion_calle'],
+        direccion_numero=data['direccion_numero'],
+        habilitado=1
+    )
 
-    id_paciente += 1
-    export_paciente_csv()
+    db.session.add(paciente)
+    db.session.commit()
 
-    return pacientes
+    return paciente
 
-def modificar_paciente(search_id,data):
-    global pacientes
+def modificar_paciente(dni_search, data):
+    existe = obtener_paciente_id(dni_search)
 
-    for paciente in pacientes:
-        if paciente['id'] == search_id:
-            paciente['dni'] = data['dni']
-            paciente['nombre'] = data['nombre']
-            paciente['apellido'] = data['apellido']
-            paciente['telefono'] = data['telefono']
-            paciente['email'] = data['email']
-            paciente['direccion_calle'] = data['direccion_calle']
-            paciente['direccion_numero'] = data['direccion_numero']
+    if existe:
+        query_filters = []
 
-            export_paciente_csv()
-          
-            return paciente
+        if 'dni_paciente' in data:
+            query_filters.append(and_(Paciente.id_paciente != existe.id_paciente, Paciente.dni_paciente == data['dni_paciente']))
+        if 'email_paciente' in data:
+            query_filters.append(and_(Paciente.id_paciente != existe.id_paciente, Paciente.email_paciente == data['email_paciente']))
+        if 'telefono_paciente' in data:
+            query_filters.append(and_(Paciente.id_paciente != existe.id_paciente, Paciente.telefono_paciente == data['telefono_paciente']))
+
+        existing_patient = Paciente.query.filter(*query_filters).first()
+
+        if existing_patient:
+            campo_en_uso = next((campo for campo in ['dni_paciente', 'email_paciente', 'telefono_paciente'] if campo in data), None)
+            return None, {'error': f'El {campo_en_uso} ya está en uso por otro paciente'}
+        
+        for key, value in data.items():
+            setattr(existe, key, value)
+
+        db.session.commit()
+
+        return existe, None
+
+    return None, {'error': f'Paciente con DNI {dni_search} no encontrado'}
+
+def deshabilitar_paciente(dni_search):
+    existe = obtener_paciente_id(dni_search)
+
+    if existe:
+        existe.habilitado = 0
+        db.session.commit()
+        return existe
+
+    return None
+
+def habilitar_paciente(dni_search):
+    existe = obtener_paciente_id(dni_search)
+
+    if existe:
+        existe.habilitado = 1
+        db.session.commit()
+        return existe
 
     return None
