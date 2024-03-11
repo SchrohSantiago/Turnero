@@ -1,5 +1,7 @@
 from app import db
 from sqlalchemy import and_
+from sqlalchemy.orm import relationship
+
 
 
 class Medico(db.Model):
@@ -13,6 +15,9 @@ class Medico(db.Model):
     telefono = db.Column(db.String(100), unique=True,nullable=False)
     email = db.Column(db.String(100), unique=True, nullable=False)
     habilitado = db.Column(db.Integer, nullable=False)
+
+    turnos = relationship('Turno', back_populates='medico')
+    agenda_medico = relationship('Agenda_Medico', back_populates='medico')
 
     def medic_dict(self):
         return {
@@ -32,8 +37,11 @@ class Medico(db.Model):
 def obtener_lista_medicos():
     return Medico.query.all()
 
-def obtener_medico_id(dni_search):
+def obtener_medico_dni(dni_search):
     return Medico.query.filter_by(dni=dni_search).first()
+
+def obtener_medico_id(id_search):
+    return Medico.query.get(id_search)
 
 
 def agregar_medico(data):
@@ -62,7 +70,7 @@ def agregar_medico(data):
 
 def modificar_medico(dni_search, data):
     # Obtener el médico existente
-    existe = obtener_medico_id(dni_search)
+    existe = obtener_medico_dni(dni_search)
 
     if existe:
         # Verificar si se proporcionó dni, email, teléfono o matrícula en los datos
@@ -105,7 +113,7 @@ def modificar_medico(dni_search, data):
 
 def deshabilitar_medico(dni_search):
     # Obtener el médico existente
-    existe = obtener_medico_id(dni_search)
+    existe = obtener_medico_dni(dni_search)
 
     existe.habilitado = 0
     db.session.commit()
@@ -114,7 +122,7 @@ def deshabilitar_medico(dni_search):
 
 def habilitar_medico(dni_search):
 
-    existe = obtener_medico_id(dni_search)
+    existe = obtener_medico_dni(dni_search)
 
     existe.habilitado = 1
     db.session.commit()
@@ -123,28 +131,28 @@ def habilitar_medico(dni_search):
 
 def eliminar_medico(dni_search):
     try:
-        # Obtener el médico existente
-        existe = obtener_medico_id(dni_search)
+        existe = obtener_medico_dni(dni_search)
 
         if existe:
-            # Imprimir información antes de la eliminación
-            print(f"Eliminando médico con DNI {dni_search} - ID: {existe.id_medico}")
 
             # Eliminar el médico de la sesión y confirmar los cambios en la base de datos
             db.session.delete(existe)
             db.session.commit()
 
-            # Imprimir información después de la eliminación
-            print(f"Médico eliminado correctamente.")
-
             # Devolver el médico eliminado
             return existe
 
     except Exception as e:
-        # Imprimir el error
         print(f"Error durante la eliminación: {e}")
 
-    # Si no se encuentra el médico o hay un error, devolver None
     return None
 
 
+def verificar_habilitacion_medico(id_search):
+    existe = obtener_medico_id(id_search)
+
+   
+    if existe.habilitado == 1:
+        return True
+    else:
+        return False

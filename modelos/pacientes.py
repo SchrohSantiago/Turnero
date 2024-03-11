@@ -1,5 +1,6 @@
 from app import db
 from sqlalchemy import and_
+from sqlalchemy.orm import relationship
 
 class Paciente(db.Model):
     __tablename__ = 'pacientes'
@@ -13,7 +14,8 @@ class Paciente(db.Model):
     direccion_calle = db.Column(db.String(100), nullable=False)
     direccion_numero = db.Column(db.String(100), nullable=False)
     habilitado = db.Column(db.Integer, nullable=False)
-    
+
+    turnos = relationship('Turno', back_populates='paciente')  #Relacion bidireccional con la tabla 'turnos'
 
     def paciente_dict(self):
         return {
@@ -34,8 +36,11 @@ class Paciente(db.Model):
 def obtener_lista_pacientes():
     return Paciente.query.all()
 
-def obtener_paciente_id(dni_search):
+def obtener_paciente_dni(dni_search):
     return Paciente.query.filter_by(dni_paciente=dni_search).first()
+
+def obtener_paciente_id(id_search):
+    return Paciente.query.get(id_search)
 
 def agregar_paciente(data):
     existe_dni = Paciente.query.filter_by(dni_paciente=data['dni_paciente']).first()
@@ -61,7 +66,7 @@ def agregar_paciente(data):
     return paciente
 
 def modificar_paciente(dni_search, data):
-    existe = obtener_paciente_id(dni_search)
+    existe = obtener_paciente_dni(dni_search)
 
     if existe:
         query_filters = []
@@ -89,7 +94,7 @@ def modificar_paciente(dni_search, data):
     return None, {'error': f'Paciente con DNI {dni_search} no encontrado'}
 
 def deshabilitar_paciente(dni_search):
-    existe = obtener_paciente_id(dni_search)
+    existe = obtener_paciente_dni(dni_search)
 
     if existe:
         existe.habilitado = 0
@@ -99,7 +104,7 @@ def deshabilitar_paciente(dni_search):
     return None
 
 def habilitar_paciente(dni_search):
-    existe = obtener_paciente_id(dni_search)
+    existe = obtener_paciente_dni(dni_search)
 
     if existe:
         existe.habilitado = 1
@@ -107,3 +112,20 @@ def habilitar_paciente(dni_search):
         return existe
 
     return None
+
+def eliminar_paciente(dni_search):
+    try:
+        existe = obtener_paciente_dni(dni_search)
+
+        if existe:
+
+            db.session.delete(existe)
+            db.session.commit()
+
+            return existe
+
+    except Exception as e:
+        print(f"Error durante la eliminación: {e}")
+
+    return None
+

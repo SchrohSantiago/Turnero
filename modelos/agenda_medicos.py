@@ -1,107 +1,97 @@
-from flask import request
 from datetime import datetime
+from app import db
+from sqlalchemy.orm import relationship
+
+class Agenda_Medico(db.Model):
+    __tablename__ = 'agenda_medicos'
+
+    id_agenda = db.Column(db.Integer, unique=True, primary_key=True)
+    id_medico = db.Column(db.Integer, db.ForeignKey('medicos.id_medico'), nullable=False)
+    dia_numero = db.Column(db.Integer, nullable=False)
+    hora_inicio = db.Column(db.String(20), nullable=False)
+    hora_fin = db.Column(db.String(20), nullable=False)
+    fecha_actualizacion = db.Column(db.String(20), nullable=False, default=str(datetime.now()))
+
+    medico = relationship('Medico', back_populates='agenda_medico')
+   
+    def agenda_dict(self):
+        return {
+            'id_agenda': self.id_agenda,
+            'medico': self.medico.medic_dict(),
+            'dia_numero': self.dia_numero,
+            'hora_inicio': self.hora_inicio,
+            'hora_fin': self.hora_fin,
+            'fecha_actualizacion': self.fecha_actualizacion,  # Convertir a cadena de texto
+        }
 
 
-# def obtener_agenda_medicos():
-#     global agenda_medicos
+def obtener_agenda_medicos():
+    # Imprimir instancias de objetos, no la clase
+    agenda_medico_instances = Agenda_Medico.query.order_by(Agenda_Medico.dia_numero, Agenda_Medico.hora_inicio).all()
 
-#     ahora = datetime.now()
-
-#     if os.path.exists(csv_agenda_medicos):
-#         import_csv()
-
-#         horarios_info = [
-#             (agenda['id_medico'], agenda['dia_numero'], agenda['hora_inicio'], agenda['hora_fin'])
-#             for agenda in agenda_medicos
-#         ]
-
-#         # ordenamos por dia y hora
-#         horarios_info.sort(key=lambda x: (x[0], x[1], x[2]))
-
-#         # filtramos los NO vencidos
-#         horarios_disponibles = [
-#             info for info in horarios_info 
-#             if (
-#                 (datetime.strptime(info[3], '%H:%M').time() > ahora.time() and int(info[1]) == ahora.weekday())
-#                 or (int(info[1]) > ahora.weekday())
-#             )
-#         ]
-
-#         return horarios_disponibles
-
-#     return None
-
-
-
-
-# def agregar_agenda_medico(data):
-#     import_csv()
-#     global agenda_medicos
-
-#     agenda_medicos.append({
-#         'id_medico': data['id_medico'],
-#         'dia_numero': data['dia_numero'],
-#         'hora_inicio': data['hora_inicio'],
-#         'hora_fin': data['hora_fin'],
-#         })
-
-#     export_csv()
-
-#     return agenda_medicos
-
-        
-
-# def formato_hora(hora): 
-#     try:
-#         datetime.strptime(hora, '%H:%M')
-#         return True
-#     except ValueError:
-#         return False
+    return agenda_medico_instances
     
-# def validar_turno_existente(id_medico, dia_numero):
-#     import_csv()
-#     global agenda_medicos
+
+def agregar_agenda_medico(data):
+    # Agregar un nuevo agenda
+    agenda_nuevo = Agenda_Medico(
+        id_medico=data['id_medico'],
+        dia_numero=data['dia_numero'],
+        hora_inicio=data['hora_inicio'],
+        hora_fin=data['hora_fin'],
+        fecha_actualizacion=str(datetime.now())
+    )
+
+    db.session.add(agenda_nuevo)
+    db.session.commit()
+
+    return agenda_nuevo
 
    
 
-#     # Filtrar la agenda del médico y día específico
-#     for agenda in agenda_medicos:
-#         if agenda['id_medico'] == str(id_medico) and agenda['dia_numero'] == dia_numero:
-#             return False
-
-#     return True
-
-
-# def modificar_horarios_agenda(id,data):
-#     import_csv()
-#     global agenda_medicos   
+def formato_hora(hora): 
+    try:
+        datetime.strptime(hora, '%H:%M')
+        return True
+    except ValueError:
+        return False
     
-    
-#     for agenda in agenda_medicos:
-#         if agenda['id_medico'] == str(id) and agenda['dia_numero'] == data['dia_numero']:
-#             agenda['hora_inicio'] = data['hora_inicio']
-#             agenda['hora_fin'] = data['hora_fin']
-      
-#     export_csv()
-    
-#     return agenda_medicos
+def validar_turno_existente(id_medico, dia_numero):
 
-        
+    if Agenda_Medico.query.filter_by(id_medico=id_medico, dia_numero=dia_numero).first():
+        return False
+    else:
+        return True
 
-# def desabilitar_agenda_medico(id_medico):
-#     import_csv()
-#     global agenda_medicos
 
-#     # Filtrar las agendas del médico específico
-#     agendas_a_eliminar = [agenda for agenda in agenda_medicos if agenda['id_medico'] == str(id_medico)]
+def modificar_horarios_agenda(id, data):
+    agenda = Agenda_Medico.query.filter_by(id_agenda=id).first()
 
-#     # Eliminar las agendas del médico
-#     for agenda in agendas_a_eliminar:
-#         agenda_medicos.remove(agenda)
+    if agenda:
+        # Actualizar los campos de la agenda con los nuevos valores
+        agenda.hora_inicio = data['hora_inicio']
+        agenda.hora_fin = data['hora_fin']
 
-#     export_csv()
+        # Confirmar los cambios en la base de datos
+        db.session.commit()
 
-#     return agenda_medicos
+        return agenda
+    else:
+        # Manejar el caso donde no se encuentra la agenda con el ID dado
+        return None
+
+
+def desabilitar_agenda_medico(id_medico):
+    agendas = Agenda_Medico.query.filter_by(id_medico=id_medico).all()
+
+    for agenda in agendas:
+        db.session.delete(agenda)
+
+    db.session.commit()
+
+    return agendas
+
+        # Manejar el caso donde no se encuentra la agenda
 
 
 # def validar_horario_turno(id_medico, dia_numero, hora_inicio):
@@ -120,8 +110,8 @@ from datetime import datetime
 #     return True
 
 
-# def validar_intervalo_15_minutos(hora_inicio, hora_fin):
-#     # Verificar si la diferencia entre la hora de inicio y la hora de fin es un múltiplo de 15 minutos
-#     diferencia = datetime.combine(datetime.today(), hora_fin) - datetime.combine(datetime.today(), hora_inicio)
-#     minutos = diferencia.total_seconds() / 60
-#     return minutos % 15 == 0
+def validar_intervalo_15_minutos(hora_inicio, hora_fin):
+    # Verificar si la diferencia entre la hora de inicio y la hora de fin es un múltiplo de 15 minutos
+    diferencia = datetime.combine(datetime.today(), hora_fin) - datetime.combine(datetime.today(), hora_inicio)
+    minutos = diferencia.total_seconds() / 60
+    return minutos % 15 == 0

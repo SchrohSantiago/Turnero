@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, request
-from modelos.pacientes import obtener_lista_pacientes, obtener_paciente_id, agregar_paciente, modificar_paciente,deshabilitar_paciente, habilitar_paciente
+from modelos.pacientes import obtener_lista_pacientes, obtener_paciente_dni, agregar_paciente, modificar_paciente,deshabilitar_paciente, habilitar_paciente, eliminar_paciente
 
 pacientes_bp = Blueprint('pacientes', __name__)
 
@@ -14,7 +14,7 @@ def obtener_lista_pacientes_json():
 
 @pacientes_bp.route('/pacientes/<string:dni_search>', methods=['GET'])
 def obtener_paciente_id_json(dni_search):
-    paciente = obtener_paciente_id(dni_search)
+    paciente = obtener_paciente_dni(dni_search)
 
     if paciente:
         return jsonify(paciente.paciente_dict()), 200
@@ -38,7 +38,7 @@ def agregar_paciente_json():
 
 @pacientes_bp.route('/pacientes/<string:dni_search>', methods=['PUT'])
 def modificar_paciente_json(dni_search):
-    paciente = obtener_paciente_id(dni_search)
+    paciente = obtener_paciente_dni(dni_search)
 
     if paciente:
         if request.is_json:
@@ -77,3 +77,14 @@ def habilitar_paciente_json(dni_search):
         return jsonify(paciente.paciente_dict()), 200
     else:
         return jsonify({'error': 'Paciente no encontrado'}), 404
+
+
+@pacientes_bp.route('/pacientes/<string:dni_search>', methods=['DELETE'])
+def eliminar_paciente_json(dni_search):
+    paciente = eliminar_paciente(dni_search)
+
+    if paciente:
+        return jsonify(paciente.paciente_dict()), 200
+    else:
+        return jsonify({'error': 'Paciente no encontrado'}), 404
+    

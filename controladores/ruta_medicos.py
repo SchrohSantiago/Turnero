@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, request
-from modelos.medicos import obtener_lista_medicos, obtener_medico_id, agregar_medico, modificar_medico,deshabilitar_medico, habilitar_medico, eliminar_medico
+from modelos.medicos import obtener_lista_medicos, obtener_medico_dni, agregar_medico, modificar_medico,deshabilitar_medico, habilitar_medico, eliminar_medico
 
 medicos_bp = Blueprint('medicos',__name__)
 
@@ -14,7 +14,7 @@ def obtener_lista_medicos_json():
     
 @medicos_bp.route('/medicos/<string:dni_search>', methods=['GET'])
 def obtener_medico_id_json(dni_search):
-    medicos = obtener_medico_id(dni_search)
+    medicos = obtener_medico_dni(dni_search)
 
     if medicos:
         return jsonify(medicos.medic_dict()),200
@@ -78,7 +78,7 @@ def habilitar_medico_json(dni_search):
     
 @medicos_bp.route('/medicos/<string:dni_search>', methods=['DELETE'])
 def eliminar_medico_json(dni_search):
-    medico = obtener_medico_id(dni_search)
+    medico = eliminar_medico(dni_search)
 
     if medico:
         return jsonify(medico.medic_dict()),200
