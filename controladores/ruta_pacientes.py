@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, request
-from modelos.pacientes import obtener_lista_pacientes, obtener_paciente_dni, agregar_paciente, modificar_paciente,deshabilitar_paciente, habilitar_paciente, eliminar_paciente
+from modelos.pacientes import obtener_lista_pacientes, obtener_paciente_dni, modificar_paciente,deshabilitar_paciente, habilitar_paciente, eliminar_paciente
 
 pacientes_bp = Blueprint('pacientes', __name__)
 
@@ -20,21 +20,6 @@ def obtener_paciente_id_json(dni_search):
         return jsonify(paciente.paciente_dict()), 200
     else:
         return jsonify({'error': f'Paciente con DNI {dni_search} no encontrado'}), 404
-
-@pacientes_bp.route('/pacientes', methods=['POST'])
-def agregar_paciente_json():
-    if request.is_json:
-        data = request.get_json()
-        if 'dni_paciente' in data and 'nombre_paciente' in data and 'apellido_paciente' in data and 'telefono_paciente' in data and 'email_paciente' in data and 'direccion_calle' in data and 'direccion_numero' in data:
-            paciente = agregar_paciente(data)
-            if paciente:
-                return jsonify(paciente.paciente_dict()), 200
-            else:
-                return jsonify({'error': 'Ya existe el paciente'}), 400
-        else:
-            return jsonify({'error': 'Faltan campos por completar'}), 404
-    else:
-        return jsonify({'error': 'No se recibieron los datos en formato json'}), 404
 
 @pacientes_bp.route('/pacientes/<string:dni_search>', methods=['PUT'])
 def modificar_paciente_json(dni_search):

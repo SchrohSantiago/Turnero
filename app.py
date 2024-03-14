@@ -11,11 +11,13 @@ from controladores.ruta_pacientes import pacientes_bp
 from controladores.ruta_medicos import medicos_bp
 from controladores.ruta_agenda_medicos import agenda_medicos_bp
 from controladores.ruta_turnos_medicos import turnos_bp
+from controladores.ruta_login import login_bp
 
 app.register_blueprint(pacientes_bp)
 app.register_blueprint(medicos_bp)
 app.register_blueprint(agenda_medicos_bp)
 app.register_blueprint(turnos_bp)
+app.register_blueprint(login_bp)
 
 if __name__ == '__main__':
     app.run(debug=True)

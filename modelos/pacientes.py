@@ -11,6 +11,7 @@ class Paciente(db.Model):
     apellido_paciente = db.Column(db.String(100), nullable=False)
     telefono_paciente = db.Column(db.String(100), unique=True, nullable=False)
     email_paciente = db.Column(db.String(100), unique=True, nullable=False)
+    password_paciente = db.Column(db.String(100), unique=True, nullable=False)
     direccion_calle = db.Column(db.String(100), nullable=False)
     direccion_numero = db.Column(db.String(100), nullable=False)
     habilitado = db.Column(db.Integer, nullable=False)
@@ -42,28 +43,6 @@ def obtener_paciente_dni(dni_search):
 def obtener_paciente_id(id_search):
     return Paciente.query.get(id_search)
 
-def agregar_paciente(data):
-    existe_dni = Paciente.query.filter_by(dni_paciente=data['dni_paciente']).first()
-    existe_email = Paciente.query.filter_by(email_paciente=data['email_paciente']).first()
-
-    if existe_dni or existe_email:
-        return None
-    
-    paciente = Paciente(
-        dni_paciente=data['dni_paciente'],
-        nombre_paciente=data['nombre_paciente'],
-        apellido_paciente=data['apellido_paciente'],
-        telefono_paciente=data['telefono_paciente'],
-        email_paciente=data['email_paciente'],
-        direccion_calle=data['direccion_calle'],
-        direccion_numero=data['direccion_numero'],
-        habilitado=1
-    )
-
-    db.session.add(paciente)
-    db.session.commit()
-
-    return paciente
 
 def modificar_paciente(dni_search, data):
     existe = obtener_paciente_dni(dni_search)
